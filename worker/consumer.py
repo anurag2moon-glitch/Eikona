@@ -97,6 +97,16 @@ class Worker:
             print(f"[Worker] Job {job_id} FAILED: {e}\n{tb}")
             self.queue.mark_failed(job_id, str(e))
 
+    def _check_auto_update(self):
+        """Check if a newer checkpoint has appeared in the filesystem."""
+        latest = config.get_latest_checkpoint()
+        if latest and latest != self._current_checkpoint:
+            print(f"[Worker] Found newer checkpoint: {latest}")
+            if self.engine is not None:
+                self.engine.reload_checkpoint(latest)
+            self._current_checkpoint = latest
+            print(f"[Worker] Auto-updated to latest weights.")
+
     def run(self):
         """Main loop — poll queue, process one job at a time."""
         print("=" * 60)
@@ -118,8 +128,11 @@ class Worker:
         print("[Worker] Cleanup complete. Ready for new jobs.")
 
         while self._running:
-            # Check for checkpoint reload requests
+            # Check for checkpoint reload requests (Sentinel)
             self._check_reload()
+            
+            # Check for newer checkpoints automatically
+            self._check_auto_update()
 
             # Pick up next job
             job = self.queue.next_job()

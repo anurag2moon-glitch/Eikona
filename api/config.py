@@ -14,9 +14,33 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+def get_latest_checkpoint():
+    ckpt_dir = PROJECT_ROOT / "checkpoints"
+    if not ckpt_dir.exists():
+        return None
+    
+    # Look for G_epochX.pth files
+    import re
+    checkpoints = []
+    for f in ckpt_dir.glob("G_epoch*.pth"):
+        match = re.search(r"G_epoch(\d+)\.pth", f.name)
+        if match:
+            checkpoints.append((int(match.group(1)), str(f)))
+            
+    if not checkpoints:
+        # Fallback to any .pth file if no epoch-named ones exist
+        all_pths = list(ckpt_dir.glob("*.pth"))
+        return str(all_pths[0]) if all_pths else None
+        
+    # Return the one with highest epoch number
+    checkpoints.sort(key=lambda x: x[0], reverse=True)
+    return checkpoints[0][1]
+
+# Automatic checkpoint discovery
+_detected_ckpt = get_latest_checkpoint()
 CHECKPOINT_PATH: str = os.getenv(
     "EIKONA_CHECKPOINT",
-    str(PROJECT_ROOT / "checkpoints" / "G_epoch1.pth"),
+    _detected_ckpt or str(PROJECT_ROOT / "checkpoints" / "G_epoch1.pth"),
 )
 
 INDEX_DIR: str = os.getenv(
