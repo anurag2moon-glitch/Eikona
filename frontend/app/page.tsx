@@ -139,55 +139,20 @@ export default function Home() {
             key="result"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex-1 flex flex-col gap-6"
+            className="flex-1 flex flex-col relative"
           >
-            <div className="glass-card flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 p-4 border-white/[0.03]">
-              {/* Top: 3-Image Comparison */}
-              <div className="flex flex-col gap-3">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 italic ml-1">Synthesis Breakdown</span>
-                <div className="aspect-[3/1] bg-black/40 rounded-2xl overflow-hidden p-1 border border-white/5">
-                  <img 
-                    src={resultUrls?.breakdown} 
-                    className="w-full h-full object-contain" 
-                    alt="Synthesis Breakdown" 
-                  />
-                </div>
-              </div>
-
-              {/* Bottom: Solo Output */}
-              <div className="flex flex-col gap-3">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 italic ml-1">Generated Artifact</span>
-                <div className="aspect-square bg-black/40 rounded-2xl overflow-hidden border border-white/5 relative">
-                  <div style={{
-                    width: '100%',
-                    height: '100%',
-                    overflow: 'hidden',
-                    position: 'relative'
-                  }}>
-                    <img 
-                      src={resultUrls?.solo} 
-                      className="absolute object-cover"
-                      style={{
-                        width: '300%',
-                        height: 'calc(100% - 40px)', // adjusted for backend label height
-                        maxWidth: 'none',
-                        right: 0,
-                        top: 0
-                      }}
-                      alt="Solo Result" 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-4 gap-4 mt-auto mb-4">
+            {/* Minimalist Fixed Controls */}
+            <div className="absolute top-4 left-4 z-20">
               <button 
                 onClick={reset}
-                className="btn-secondary h-16 rounded-3xl font-medium flex items-center justify-center border-white/5 group"
+                title="New Synthesis"
+                className="h-10 w-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-all active:scale-90"
               >
-                <RefreshCw className="w-5 h-5 text-white/20 group-hover:rotate-180 transition-transform duration-500" />
+                <RefreshCw className="w-4 h-4" />
               </button>
+            </div>
+
+            <div className="absolute top-4 right-4 z-20">
               <button 
                 onClick={async () => {
                    if (!resultUrls?.solo) return;
@@ -202,11 +167,45 @@ export default function Home() {
                    link.click();
                    document.body.removeChild(link);
                 }}
-                className="btn-primary col-span-3 h-16 rounded-3xl flex items-center justify-center gap-2 shadow-xl shadow-green-500/10 active:scale-98 transition-all"
+                title="Download Artifact"
+                className="h-10 w-10 rounded-full bg-white text-black flex items-center justify-center shadow-xl shadow-white/20 hover:scale-105 transition-all active:scale-90"
               >
-                <Download className="w-6 h-6" /> 
-                <span className="font-bold tracking-tight">Save Artifact</span>
+                <Download className="w-4 h-4" />
               </button>
+            </div>
+
+            <div className="flex-1 flex flex-col gap-2 overflow-y-auto custom-scrollbar rounded-[32px] border border-white/[0.03] bg-black/20">
+              {/* Top: 3-Image Comparison */}
+              <div className="aspect-[3/1] bg-black/40 rounded-t-[32px] overflow-hidden border-b border-white/[0.03]">
+                <img 
+                  src={resultUrls?.breakdown} 
+                  className="w-full h-full object-contain" 
+                  alt="Breakdown" 
+                />
+              </div>
+
+              {/* Bottom: Solo Output */}
+              <div className="aspect-square bg-black/40 rounded-b-[32px] overflow-hidden relative">
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  <img 
+                    src={resultUrls?.solo} 
+                    className="absolute object-cover"
+                    style={{
+                      width: '300%',
+                      height: 'calc(100% - 40px)', 
+                      maxWidth: 'none',
+                      right: 0,
+                      top: 0
+                    }}
+                    alt="Synthesis" 
+                  />
+                </div>
+              </div>
             </div>
           </motion.div>
         ) : (
