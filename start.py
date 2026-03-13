@@ -1,33 +1,37 @@
-"""
-start.py
-
-Single command to spin up both the API server and the inference worker.
-
-    python start.py                     # defaults
-    python start.py --port 9000         # custom port
-    python start.py --workers-only      # just the worker (no API)
-    python start.py --api-only          # just the API (no worker)
-
-Architecture:
-    ┌────────────────────────────────────────────┐
-    │  start.py (main process)                   │
-    │                                            │
-    │  ┌──────────────────┐  ┌────────────────┐  │
-    │  │  API Server      │  │  Worker        │  │
-    │  │  (subprocess)    │  │  (subprocess)  │  │
-    │  │  uvicorn         │  │  consumer.py   │  │
-    │  └──────────────────┘  └────────────────┘  │
-    └────────────────────────────────────────────┘
-"""
-
 import os
 import sys
 import signal
 import argparse
 import subprocess
 import time
+import re
+import json
+import requests
+from dotenv import load_dotenv
+
+load_dotenv() # Load root .env
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+def push_to_firebase(url):
+    db_url = os.getenv("FIREBASE_DATABASE_URL")
+    if not db_url:
+        print("  ⚠️  FIREBASE_DATABASE_URL not set in .env")
+        return
+    
+    # Ensure URL ends without trailing slash for the path
+    db_url = db_url.rstrip("/")
+    endpoint = f"{db_url}/server_config.json"
+    
+    try:
+        data = {"api_url": url, "updated_at": int(time.time())}
+        response = requests.patch(endpoint, json=data)
+        if response.status_code == 200:
+            print(f"  🔥 Successfully synced Cloudflare URL to Firebase.")
+        else:
+            print(f"  ⚠️  Firebase sync failed with status {response.status_code}: {response.text}")
+    except Exception as e:
+        print(f"  ⚠️  Firebase sync error: {e}")
 
 
 def main():
@@ -48,9 +52,19 @@ Examples:
     parser.add_argument("--api-only", action="store_true", help="Start only the API server")
     parser.add_argument("--workers-only", action="store_true", help="Start only the worker")
     parser.add_argument("--reload", action="store_true", help="Enable auto-reload for development")
+    parser.add_argument("--tunnel", action="store_true", help="Start a Cloudflare tunnel")
     args = parser.parse_args()
 
     processes = []
+
+    def update_frontend_env(url):
+        env_path = os.path.join(PROJECT_ROOT, "frontend", ".env.local")
+        try:
+            with open(env_path, "w") as f:
+                f.write(f"NEXT_PUBLIC_API_URL={url}\n")
+            print(f"  📝 Updated frontend/.env.local with {url}")
+        except Exception as e:
+            print(f"  ⚠️  Failed to update frontend/.env.local: {e}")
 
     def shutdown(signum=None, frame=None):
         print("\n🛑 Shutting down...")
@@ -79,6 +93,57 @@ Examples:
     print("=" * 60)
     print("  🎨 Eikona — RAG-Guided Pix2Pix Server")
     print("=" * 60)
+
+    # Start Tunnel if requested
+    if args.tunnel:
+        print("  ☁️  Starting Cloudflare Tunnel...")
+        try:
+            # Check for local binary first
+            local_bin = os.path.join(PROJECT_ROOT, "cloudflared")
+            binary = local_bin if os.path.exists(local_bin) else "cloudflared"
+            
+            # We use --url to start an ephemeral tunnel
+            tunnel_cmd = [binary, "tunnel", "--url", f"http://localhost:{args.port}"]
+            # We need to capture stderr because cloudflared logs there
+            tunnel_proc = subprocess.Popen(
+                tunnel_cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE, 
+                text=True,
+                bufsize=1,
+                env=env
+            )
+            processes.append(("Tunnel", tunnel_proc))
+            
+            # Non-blocking check for the URL
+            tunnel_url = None
+            start_time = time.time()
+            print("     Waiting for tunnel URL...")
+            
+            # Read stderr line by line until we find the URL or timeout
+            if tunnel_proc.stderr:
+                import re
+                url_pattern = re.compile(r"https://[a-zA-Z0-9-]+\.trycloudflare\.com")
+                
+                while time.time() - start_time < 30:
+                    line = tunnel_proc.stderr.readline()
+                    if not line:
+                        break
+                    match = url_pattern.search(line)
+                    if match:
+                        tunnel_url = match.group(0)
+                        print(f"     ✅ Tunnel Live: {tunnel_url}")
+                        update_frontend_env(tunnel_url)
+                        push_to_firebase(tunnel_url)
+                        break
+            
+            if not tunnel_url:
+                print("     ⚠️  Could not find tunnel URL in logs.")
+        except FileNotFoundError:
+            print("     ❌ Error: 'cloudflared' binary not found. Please install it first.")
+            print("        brew install cloudflare/cloudflare/cloudflared")
+        except Exception as e:
+            print(f"     ❌ Tunnel Error: {e}")
 
     # Start Worker
     if not args.api_only:
@@ -113,10 +178,17 @@ Examples:
     try:
         while True:
             for name, proc in processes:
+                # Special handling for Tunnel since we are reading its stderr in a thread-like way
+                # but for now just poll and check if it crashed
                 retcode = proc.poll()
                 if retcode is not None:
-                    print(f"\n⚠️  {name} exited with code {retcode}")
-                    shutdown()
+                    # If tunnel exits but we want it to stay, report error
+                    if name == "Tunnel":
+                        print(f"\n⚠️  {name} exited unexpectedly with code {retcode}")
+                        # Optional: Print last few lines of stderr for debugging
+                    else:
+                        print(f"\n⚠️  {name} exited with code {retcode}")
+                        shutdown()
             time.sleep(0.5)
     except KeyboardInterrupt:
         shutdown()

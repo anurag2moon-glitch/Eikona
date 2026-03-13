@@ -1,4 +1,29 @@
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { db, ref, get } from './firebase';
+
+let cachedApiBase: string | null = null;
+let lastFetchTime = 0;
+const CACHE_TTL = 30000; // 30 seconds
+
+async function getDynamicApiBase(): Promise<string> {
+  const now = Date.now();
+  if (cachedApiBase && (now - lastFetchTime < CACHE_TTL)) {
+    return cachedApiBase;
+  }
+
+  try {
+    const dbRef = ref(db, 'server_config/api_url');
+    const snapshot = await get(dbRef);
+    if (snapshot.exists()) {
+      cachedApiBase = snapshot.val();
+      lastFetchTime = now;
+      return cachedApiBase!;
+    }
+  } catch (error) {
+    console.warn('Failed to fetch API base from Firebase, falling back to env/default:', error);
+  }
+
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+}
 
 export type JobStatus = 'queued' | 'processing' | 'completed' | 'failed';
 
@@ -16,10 +41,11 @@ export interface JobResponse {
  * Submits an image to the API
  */
 export async function submitJob(imageBlob: Blob): Promise<string> {
+  const apiBase = await getDynamicApiBase();
   const formData = new FormData();
   formData.append('image', imageBlob, 'input.png');
 
-  const response = await fetch(`${API_BASE}/api/v1/generate`, {
+  const response = await fetch(`${apiBase}/api/v1/generate`, {
     method: 'POST',
     body: formData,
   });
@@ -40,14 +66,14 @@ const MAX_POLLING_ATTEMPTS = 120; // 2 minutes max
  * Polls for job completion with a safety timeout
  */
 export async function pollJob(jobId: string, onUpdate?: (status: JobStatus) => void): Promise<string> {
+  const apiBase = await getDynamicApiBase();
   let attempts = 0;
 
   while (attempts < MAX_POLLING_ATTEMPTS) {
     try {
-      const response = await fetch(`${API_BASE}/api/v1/jobs/${jobId}`);
+      const response = await fetch(`${apiBase}/api/v1/jobs/${jobId}`);
       
       if (!response.ok) {
-        // Log non-200 but keep trying for a bit, maybe it's a temporary blip
         console.warn(`Attempt ${attempts}: API responded with ${response.status}`);
       } else {
         const job: JobResponse = await response.json();
@@ -57,10 +83,7 @@ export async function pollJob(jobId: string, onUpdate?: (status: JobStatus) => v
         if (job.status === 'failed') throw new Error(job.error || 'The neural engine encountered an internal error.');
       }
     } catch (err) {
-      // If it's our own 'failed' error, rethrow it
       if (err instanceof Error && err.message.includes('neural engine')) throw err;
-      
-      // Otherwise, it might be a network error, log and continue polling
       console.error('Polling error:', err);
     }
 
@@ -71,6 +94,7 @@ export async function pollJob(jobId: string, onUpdate?: (status: JobStatus) => v
   throw new Error('Synthesis timed out. The worker might be overloaded.');
 }
 
-export function getResultUrl(jobId: string) {
-  return `${API_BASE}/api/v1/jobs/${jobId}/result`;
+export async function getResultUrl(jobId: string) {
+  const apiBase = await getDynamicApiBase();
+  return `${apiBase}/api/v1/jobs/${jobId}/result`;
 }

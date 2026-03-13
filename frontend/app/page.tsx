@@ -25,6 +25,7 @@ export default function Home() {
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
+  const [resultUrls, setResultUrls] = useState<{ breakdown: string; solo: string } | null>(null);
 
   const canvasRef = useRef<CanvasHandle>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -61,6 +62,14 @@ export default function Home() {
       setStatus('processing');
 
       await pollJob(id);
+      
+      // Resolve URLs after completion
+      const url = await getResultUrl(id);
+      setResultUrls({
+        breakdown: url,
+        solo: url // the solo logic uses the same URL but with CSS cropping
+      });
+      
       setStatus('done');
     } catch (err) {
       console.error(err);
@@ -73,6 +82,7 @@ export default function Home() {
     setImage(null);
     setFile(null);
     setJobId(null);
+    setResultUrls(null);
     setStatus('idle');
     setErrorMsg(null);
     if (canvasRef.current) canvasRef.current.clear();
@@ -137,7 +147,7 @@ export default function Home() {
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 italic ml-1">Synthesis Breakdown</span>
                 <div className="aspect-[3/1] bg-black/40 rounded-2xl overflow-hidden p-1 border border-white/5">
                   <img 
-                    src={getResultUrl(jobId)} 
+                    src={resultUrls?.breakdown} 
                     className="w-full h-full object-contain" 
                     alt="Synthesis Breakdown" 
                   />
@@ -155,7 +165,7 @@ export default function Home() {
                     position: 'relative'
                   }}>
                     <img 
-                      src={getResultUrl(jobId)} 
+                      src={resultUrls?.solo} 
                       className="absolute object-cover"
                       style={{
                         width: '300%',
@@ -180,13 +190,14 @@ export default function Home() {
               </button>
               <button 
                 onClick={async () => {
-                   const url = getResultUrl(jobId);
+                   if (!resultUrls?.solo) return;
+                   const url = resultUrls.solo;
                    const response = await fetch(url);
                    const blob = await response.blob();
                    const blobUrl = window.URL.createObjectURL(blob);
                    const link = document.createElement('a');
                    link.href = blobUrl;
-                   link.download = `eikona-${jobId.slice(0,8)}.png`;
+                   link.download = `eikona-${jobId?.slice(0,8)}.png`;
                    document.body.appendChild(link);
                    link.click();
                    document.body.removeChild(link);
