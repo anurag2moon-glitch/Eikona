@@ -1,0 +1,3 @@
+"""
+worker/ — Background worker package.
+"""
