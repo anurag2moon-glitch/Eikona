@@ -2,26 +2,17 @@
 
 import React, { useState, useRef } from 'react';
 import {
-  Upload,
-  PenTool,
-  Sparkles,
   Download,
   X,
-  Plus,
-  Image as ImageIcon,
   ChevronRight,
   RefreshCw,
-  LayoutGrid,
-  Monitor,
-  Search,
-  Zap,
-  Cpu,
-  ArrowRight,
   Database,
   ShieldCheck,
   ZapIcon,
   CircleDashed,
-  Layers
+  Layers,
+  Sparkles,
+  Cpu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Canvas, { CanvasHandle } from './components/Canvas';
@@ -34,8 +25,6 @@ export default function Home() {
   const [status, setStatus] = useState<'idle' | 'uploading' | 'processing' | 'done' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [workerStatus, setWorkerStatus] = useState<string>('');
-  const [resultMode, setResultMode] = useState<'solo' | 'comparison'>('solo');
 
   const canvasRef = useRef<CanvasHandle>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -71,7 +60,7 @@ export default function Home() {
       setJobId(id);
       setStatus('processing');
 
-      await pollJob(id, (status) => setWorkerStatus(status));
+      await pollJob(id);
       setStatus('done');
     } catch (err) {
       console.error(err);

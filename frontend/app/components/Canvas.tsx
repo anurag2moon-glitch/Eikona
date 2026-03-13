@@ -20,13 +20,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ onDraw }, ref) => {
   const [history, setHistory] = useState<ImageData[]>([]);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  useEffect(() => {
-    initCanvas();
-    window.addEventListener('resize', initCanvas);
-    return () => window.removeEventListener('resize', initCanvas);
-  }, [isFullscreen]);
-
-  const initCanvas = () => {
+  const initCanvas = React.useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -54,7 +48,13 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({ onDraw }, ref) => {
     if (history.length > 0) {
       context.putImageData(history[history.length - 1], 0, 0);
     }
-  };
+  }, [history]);
+
+  useEffect(() => {
+    initCanvas();
+    window.addEventListener('resize', initCanvas);
+    return () => window.removeEventListener('resize', initCanvas);
+  }, [initCanvas]);
 
   const saveToHistory = () => {
     const canvas = canvasRef.current;
