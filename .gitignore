@@ -51,3 +51,13 @@ download.log
 .idea/
 .DS_Store
 Thumbs.db
+
+# --- Frontend ---
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.next-env.d.ts
+frontend/.vercel
+*.tsbuildinfo
+frontend/.env*.local

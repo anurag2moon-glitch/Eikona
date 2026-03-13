@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap');
+@import "tailwindcss";
+
+:root {
+  --background: #050505;
+  --foreground: #ffffff;
+  --accent-start: #d4fc79;
+  --accent-end: #96e6a1;
+  --surface: #141414;
+  --surface-hover: #1c1c1c;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+@layer utilities {
+  .bg-canvas {
+    background: radial-gradient(circle at top right, #1a1a1a 0%, #050505 100%);
+  }
+  
+  .glass-pill {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+  }
+  
+  .glass-card {
+    background: rgba(20, 20, 20, 0.8);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);
+    color: #000;
+    font-weight: 600;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .btn-primary:active {
+    scale: 0.96;
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover {
+    background: var(--surface-hover);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}

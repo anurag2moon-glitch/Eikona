@@ -72,6 +72,9 @@ Examples:
     env["EIKONA_HOST"] = args.host
     env["EIKONA_PORT"] = str(args.port)
     env["PYTHONPATH"] = PROJECT_ROOT + ((":" + env.get("PYTHONPATH", "")) if env.get("PYTHONPATH") else "")
+    
+    # Fix for OpenMP Conflict on macOS
+    env["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
     print("=" * 60)
     print("  🎨 Eikona — RAG-Guided Pix2Pix Server")
