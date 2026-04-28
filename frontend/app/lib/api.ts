@@ -96,5 +96,6 @@ export async function pollJob(jobId: string, onUpdate?: (status: JobStatus) => v
 
 export async function getResultUrl(jobId: string) {
   const apiBase = await getDynamicApiBase();
-  return `${apiBase}/api/v1/jobs/${jobId}/result`;
+  // Add a timestamp to bust browser cache so the user doesn't have to clear cookies/incognito
+  return `${apiBase}/api/v1/jobs/${jobId}/result?t=${Date.now()}`;
 }

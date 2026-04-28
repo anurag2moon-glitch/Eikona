@@ -194,13 +194,14 @@ export default function Home() {
                 }}>
                   <img 
                     src={resultUrls?.solo} 
-                    className="absolute object-cover"
+                    className="absolute"
                     style={{
                       width: '300%',
-                      height: 'calc(100% - 40px)', 
+                      height: '100%', 
                       maxWidth: 'none',
-                      right: 0,
-                      top: 0
+                      right: '-1px', // Minor offset to prevent edge clipping
+                      top: 0,
+                      objectFit: 'contain'
                     }}
                     alt="Synthesis" 
                   />
